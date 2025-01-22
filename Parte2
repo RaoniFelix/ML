@@ -1,5 +1,353 @@
 # Analise Exploratória em Variáveis Categóricas
-<br>
-Nesta analise temos 2 objetivos:<br>
-1 - Conhecer como a variável alvo (POSSIVEL_FRAUDE) está relacionada com as outras variáveis.<br>
-2 - Iremos avaliar as variáveis categóricas para conhecimento dos dados e descartar variáveis que não fazem sentido.
+
+#Nesta analise temos 2 objetivos:
+#1 - Conhecer como a variável alvo (POSSIVEL_FRAUDE) está relacionada com as outras variáveis.
+#2 - Iremos avaliar as variáveis categóricas para conhecimento dos dados e descartar variáveis que não fazem sentido.
+
+# Apenas para ajustar o tamanho dos gráficos
+plt.rcParams["figure.figsize"] = [10.00, 4.00]
+plt.rcParams["figure.autolayout"] = True
+
+#Podemos constatar na analise que não há discrepancias nestas variaveis
+
+sns.countplot(data = df_dados, x = "UF_Cliente", hue = "Possivel_Fraude")
+plt.show()
+
+#Podemos constatar na analise que não há discrepancias nestas variaveis
+
+sns.countplot(data = df_dados, x = "Sexo", hue = "Possivel_Fraude")
+plt.show()
+
+#Podemos constatar na analise que não há discrepancias nestas variaveis
+sns.countplot(data = df_dados, x = "Faixa_Etaria", hue = "Possivel_Fraude")
+plt.show()
+
+#Podemos constatar na analise que não há discrepancias nestas variaveis
+sns.countplot(data = df_dados, x = "Faixa_Salarial", hue = "Possivel_Fraude")
+plt.show()
+
+#Neste caso como há muitos casos de ESTADO CIVIL diferente de Casado(C) e Solteiro(S), iremos fazer um tratamento mais adiante
+#para todos casos que não forem Casado e Solteiro, serão considerado como OUTROS. Dessa forma teremos somente 3 categorias
+#e os dados ficarão balanceados sem discrepancias.
+
+sns.countplot(data = df_dados, x = "Estado_Civil", hue = "Possivel_Fraude")
+plt.show()
+
+#Podemos observar o volume de cotas que geraram prejuízo na arrecadação de taxa de administracao
+#Essa variável iremos manter no modelo e avaliar mais adiante
+sns.countplot(data = df_dados, x = "Faixa_Dias_Atraso", hue = "Possivel_Fraude")
+plt.show()
+
+# Aqui podemos observar que não há discrepancias nestas variaveis.
+sns.countplot(data = df_dados, x = "Faixa_Prazo_Emprestimo", hue = "Possivel_Fraude")
+plt.show()
+
+# Podemos observar que esta variável está muito desbalanceada, mas iremos avaliar melhor mais adiante.
+sns.countplot(data = df_dados, x = "Faixa_Prazo_Restante", hue = "Possivel_Fraude")
+plt.show()
+
+df_dados.describe()
+
+# Total de valores únicos de cada variável do novo dataset
+valores_unicos = []
+for i in df_dados.columns[0:19].tolist():
+    print(i, ':', len(df_dados[i].astype(str).value_counts()))
+    valores_unicos.append(len(df_dados[i].astype(str).value_counts()))
+
+# Analise Exploratória - Variáveis Numéricas
+
+
+#Nesta analise temos diversos objetivos:<br>
+#1 - Conhecer as variáveis.
+#2 - Realizar uma analise estatistica nas variáveis para futuros tratamentos. Iremos avaliar média, mediana, moda, desvio padrão correlações, outliers, distribuição dos dados, etc.  
+
+#carregar variaveis para plot
+variaveis_numericas = []
+for i in df_dados.columns[0:19].tolist():
+        if df_dados.dtypes[i] == 'int64' or df_dados.dtypes[i] == 'float64':                        
+            variaveis_numericas.append(i)    
+
+#Visualizando as variáveis numéricas
+variaveis_numericas
+
+#Quantidade de variaveis
+len(variaveis_numericas)
+
+#Podemos observar nos boxplots abaixo que as variáveis númericas apresentam uma grande quantidade de "possíveis" outliers
+#Precisamos avaliar cada uma dessas variaveis dentro do contexto dos dados para saber se realmente iremos trata-las como outlier
+
+plt.rcParams["figure.figsize"] = [14.00, 64.00]
+plt.rcParams["figure.autolayout"] = True
+f, axes = plt.subplots(5, 2) #5 linhas e 2 colunas
+
+linha = 0
+coluna = 0
+for i in variaveis_numericas:
+    sns.boxplot(data = df_dados, y=i, ax=axes[linha][coluna])
+    coluna += 1
+    if coluna == 2:
+        linha += 1
+        coluna = 0            
+
+plt.show()
+
+# carregar variaveis categoricas para OneHotEncoding
+# Vamos colocar o slice somente até a coluna de indice 18 para não pegar a variável target.
+variaveis_categoricas = []
+for i in df_dados.columns[0:18].tolist():
+        if df_dados.dtypes[i] == 'object' or df_dados.dtypes[i] == 'category':                        
+            variaveis_categoricas.append(i)    
+
+# Visualizando as variaveis categoricas
+variaveis_categoricas
+
+df_dados.head()
+
+# Cria o encoder e aplica OneHotEncoder
+lb = LabelEncoder()
+
+for var in variaveis_categoricas:
+    df_dados[var] = lb.fit_transform(df_dados[var])
+
+# Verifica novamente para confirmar se após transformação surgiu algum valor nulo
+df_dados.isnull().sum()
+
+df_dados.head()
+
+# Visualizando os tipos das variaveis
+df_dados.info()
+
+# Visualiznado a quantidade da variavel target para balanceamento
+variavel_target = df_dados.Possivel_Fraude.value_counts()
+variavel_target
+
+#Separar variaveis preditoras e target
+PREDITORAS = df_dados.iloc[:, 0:18]  
+TARGET = df_dados.iloc[:, 18] 
+
+# Visualizando as variaveis preditoras
+PREDITORAS.head()
+
+# Visualizando a variavel target
+TARGET.head()
+
+# Seed para reproduzir o mesmo resultado
+seed = 100
+
+# Cria o balanceador SMOTE
+balanceador = SMOTE(random_state = seed)
+
+# Aplica o balanceador
+PREDITORAS_RES, TARGET_RES = balanceador.fit_resample(PREDITORAS, TARGET)
+
+# Visualizando o balanceamento da variável TARGET
+plt.rcParams["figure.figsize"] = [12.00, 5.00]
+plt.rcParams["figure.autolayout"] = True
+TARGET_RES.value_counts().plot(kind='bar', title='Possíveis Fraudes x Não Fraudes',color = ['#1F77B4', '#FF7F0E']);
+
+# Quantidade de registros antes do balanceamento
+PREDITORAS.shape
+
+# Quantidade de registros antes do balanceamento
+TARGET.shape
+
+# Quantidade de registros após do balanceamento
+PREDITORAS_RES.shape
+
+# Quantidade de registros após do balanceamento
+TARGET_RES.shape
+
+### Agora vamos dividir os dados em dados de treino e teste para iniciarmos a etapa de criação do modelo
+# Divisão em Dados de Treino e Teste.
+X_treino, X_teste, Y_treino, Y_teste = train_test_split(PREDITORAS_RES, TARGET_RES, test_size = 0.3, random_state = 42)
+
+X_treino.shape
+
+X_treino.head()
+
+# Normalização das Variáveis
+Normalizador = MinMaxScaler()
+X_treino_normalizados = Normalizador.fit_transform(X_treino)
+X_teste_normalizados = Normalizador.transform(X_teste)
+
+X_treino_normalizados.shape
+
+# Visualizando os dados NORMALIZADOS
+X_treino_normalizados
+
+# Padronizacao das Variáveis
+Padronizador = StandardScaler()
+X_treino_padronizados = Padronizador.fit_transform(X_treino)
+X_teste_padronizados = Padronizador.transform(X_teste)
+
+# Visualizando os dados PADRONIZADOS
+X_treino_padronizados
+
+### Criando, Treinando e Avaliando os Modelos de Machine Learning
+### Primeiro iremos fazer com o Random Forest
+# Construtor do Modelo
+randomForest = RandomForestClassifier()
+
+# Parametros default
+randomForest.get_params()
+
+# Valores para o grid de hiperparametros
+n_estimators = np.array([100,200,300])
+max_depth = np.array([10,20])
+criterion = np.array(["gini", "entropy"])
+max_features = np.array(["sqrt", "log2", None])
+min_samples_split = np.array([1,2,5])
+min_samples_leaf = np.array([1,2,3])
+
+
+# Grid de hiperparâmetros
+grid_parametros = dict(n_estimators = n_estimators,
+                       max_depth = max_depth,
+                       criterion = criterion,
+                       max_features = max_features,
+                       min_samples_split = min_samples_split,
+                       min_samples_leaf = min_samples_leaf)
+
+# Criando o modelo com o Grid de Hiperparametros
+randomForest = GridSearchCV(randomForest, grid_parametros, cv = 3, n_jobs = 8)
+
+# Treinando os modelos
+inicio = time.time()
+randomForest.fit(X_treino_normalizados, Y_treino)
+fim = time.time()
+
+# Obtendo e visualizando os parametros treinados
+treinos_rf = pd.DataFrame(randomForest.cv_results_)
+
+# Acurácia em Treino
+print(f"Acurácia em Treinamento: {randomForest.best_score_ :.2%}")
+print("")
+print(f"Hiperparâmetros Ideais: {randomForest.best_params_}")
+print("")
+print("Tempo de Treinamento do Modelo: ", round(fim - inicio,2))
+print("")
+print("Numero de treinamentos realizados: ", treinos_rf.shape[0])
+
+# Criando o classificador com Random Forest
+clf = RandomForestClassifier(n_estimators  = 100, criterion = 'entropy', max_depth = 20, 
+                             max_features = 'log2', min_samples_leaf = 1, min_samples_split = 1, n_jobs = 8)
+
+# Construção do modelo
+clf = clf.fit(X_treino_normalizados, Y_treino)
+
+# Exibindo a importancia de cada variavel no modelo preditivo
+plt.rcParams["figure.figsize"] = [10.00, 16.00]
+plt.rcParams["figure.autolayout"] = True
+
+importances = pd.Series(data=clf.feature_importances_, index=PREDITORAS.columns)
+importances = importances.sort_values(ascending = False)
+sns.barplot(x=importances, y=importances.index, orient='h').set_title('Importância de cada variável')
+plt.show()
+
+# Visualizando o percentual de importancia de cada variável
+importances.sort_values(ascending = False)
+
+# Estamos apenas "simulando" os dados de teste
+scores = clf.score(X_treino_normalizados,Y_treino)
+scores
+
+# Estamos apenas "simulando" os dados de teste
+scores = clf.score(X_teste_normalizados,Y_teste)
+scores
+
+# Dicionário de métricas e metadados
+modelo_rf = {'Melhores Hiperparametros':randomForest.best_params_,
+               'Numero de Modelos Treinados': treinos_rf.shape[0],  
+               'Melhor Score': str(round(randomForest.best_score_ * 100,2))+"%"}
+
+modelo_rf
+
+# Construtor do modelo
+modelo_svm = SVC()
+
+# Parametros default
+modelo_svm.get_params()
+
+# Valores para o grid de hiperparametros
+grid_parametros = {'C': [0.1,1,10,100],
+                   'gamma': [1,0.1,0.01,0.001],
+                   #'kernel': ['poly','rbf','sigmoid','linear'],
+                   'degree' : [2,3,4,],
+                   'coef0' : [0.5,1],
+                   #'decision_function_shape':['ovo', 'ovr'],
+                   'max_iter': [-1, 1]}
+
+
+svm = GridSearchCV(modelo_svm, grid_parametros, n_jobs = 8)
+
+# Treinando os modelos
+inicio = time.time()
+svm.fit(X_treino_normalizados, Y_treino)
+fim = time.time()
+
+# Obtendo e visualizando os parametros treinados
+treinos_svm = pd.DataFrame(svm.cv_results_)
+
+# Acurácia em Treino
+print(f"Acurácia em Treinamento: {svm.best_score_ :.2%}")
+print("")
+print(f"Hiperparâmetros Ideais: {svm.best_params_}")
+print("")
+print("Tempo de Treinamento do Modelo: ", round(fim - inicio,2))
+print("")
+print("Numero de treinamentos realizados: ", treinos_svm.shape[0])
+
+# Dicionário de métricas e metadados
+modelo_svm = {'Melhores Hiperparametros':svm.best_params_,
+               'Numero de Modelos Treinados': treinos_svm.shape[0],  
+               'Melhor Score': str(round(svm.best_score_ * 100,2))+"%"}
+
+# Classificador
+knn = KNeighborsClassifier()
+
+# Parametros default
+knn.get_params()
+
+# Valores para o grid de hiperparametros
+n_neighbors = np.array([3,4,5,6,7])
+algorithm = np.array(['auto', 'ball_tree', 'kd_tree', 'brute'])
+leaf_size = np.array([30,31,32])
+metric =  np.array(['minkowski','euclidean'])
+
+
+# Grid de hiperparâmetros
+grid_parametros = dict(n_neighbors = n_neighbors,
+                       algorithm = algorithm,
+                       leaf_size = leaf_size,
+                       metric = metric)
+
+knn = GridSearchCV(knn, grid_parametros, n_jobs = 8)
+
+# Treinando os modelos
+inicio = time.time()
+knn.fit(X_treino_normalizados, Y_treino)
+fim = time.time()
+
+# Obtendo e visualizando os parametros treinados
+treinos_knn = pd.DataFrame(knn.cv_results_)
+
+# Acurácia em Treino
+print(f"Acurácia em Treinamento: {knn.best_score_ :.2%}")
+print("")
+print(f"Hiperparâmetros Ideais: {knn.best_params_}")
+print("")
+print("Tempo de Treinamento do Modelo: ", round(fim - inicio,2))
+print("")
+print("Numero de treinamentos realizados: ", treinos_knn.shape[0])
+
+# Dicionário de métricas e metadados
+modelo_knn = {'Melhores Hiperparametros':knn.best_params_,
+               'Numero de Modelos Treinados': treinos_knn.shape[0],  
+               'Melhor Score': str(round(knn.best_score_ * 100,2))+"%"}
+
+# Gerando o DataFrame com todos os valores de todos os modelos treinados
+resumo = pd.DataFrame({'Random Forest':pd.Series(modelo_rf),
+                       'SVM':pd.Series(modelo_svm),                       
+                       'KNN':pd.Series(modelo_knn)})
+
+resumo

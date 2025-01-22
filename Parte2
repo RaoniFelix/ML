@@ -1,0 +1,5 @@
+# Analise Exploratória em Variáveis Categóricas
+<br>
+Nesta analise temos 2 objetivos:<br>
+1 - Conhecer como a variável alvo (POSSIVEL_FRAUDE) está relacionada com as outras variáveis.<br>
+2 - Iremos avaliar as variáveis categóricas para conhecimento dos dados e descartar variáveis que não fazem sentido.
